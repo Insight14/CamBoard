@@ -1,0 +1,17 @@
+# CamBoard ML Pinned Requirements Lockfile
+torch==2.6.0
+numpy==2.2.6
+scipy==1.15.2
+scikit-learn==1.6.1
+onnx==1.23.2
+onnxruntime==1.31.1
+omegaconf==2.4.0
+pyyaml==6.0.2
+tqdm==4.67.1
+matplotlib==3.10.1
+seaborn==0.13.2
+pandas==2.2.3
+pytest==8.3.5
+protobuf==7.36.2
+ml-dtypes==0.6.0
+

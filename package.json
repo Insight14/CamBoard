@@ -1,0 +1,15 @@
+{
+  "name": "camboard",
+  "version": "0.1.0",
+  "description": "CamBoard - Interactive in-browser digital whiteboard with zero-latency hand perception & gesture recognition.",
+  "scripts": {
+    "start": "python3 -m http.server 8000 --directory web",
+    "serve": "python3 -m http.server 8000 --directory web",
+    "test": "cd ml && make test",
+    "benchmark": "cd ml && node benchmarks/browser_latency.js"
+  },
+  "keywords": ["whiteboard", "onnx", "mediapipe", "hand-tracking", "gesture-recognition"],
+  "author": "CamBoard Team",
+  "license": "Apache-2.0"
+}
+

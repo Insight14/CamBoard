@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CamBoard — In-Browser Interactive Whiteboard & Perception</title>
+  <link rel="stylesheet" href="style.css?v=4">
+  <!-- ONNX Runtime Web (WebAssembly backend) -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
+  <!-- MediaPipe Hands & Camera Utils -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.4.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-logo">📐</span>
+        <div class="brand-text">
+          <h1>CamBoard</h1>
+          <span class="subtitle">Zero-Latency In-Browser Hand Perception & Whiteboard</span>
+        </div>
+      </div>
+
+      <div class="header-nav">
+        <button class="nav-tab active" data-tab="tab-whiteboard">🎨 Whiteboard & Air-Draw</button>
+        <button class="nav-tab" data-tab="tab-gesture">🖐️ Live Gestures & ASL</button>
+        <button class="nav-tab" data-tab="tab-recorder">📹 In-App Recorder</button>
+        <button class="nav-tab" data-tab="tab-benchmarks">⚡ Model Benchmarks</button>
+      </div>
+
+      <div class="status-pills">
+        <div class="pill" id="pill-ort"><span class="dot"></span> ONNX Web: <strong id="ort-status">Loading...</strong></div>
+        <div class="pill" id="pill-camera"><span class="dot"></span> Camera: <strong id="camera-status">Off</strong></div>
+        <div class="pill"><strong id="fps-counter">0 FPS</strong></div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="app-main">
+
+      <!-- TAB 1: WHITEBOARD & AIR-DRAW -->
+      <section id="tab-whiteboard" class="tab-panel active">
+        <div class="split-view">
+          <!-- Left: Camera & Air Perception HUD -->
+          <div class="side-panel">
+            <div class="panel-header">
+              <h2>📷 Camera Feed & Air Tracking</h2>
+              <button id="btn-toggle-cam" class="btn btn-primary">Start Camera</button>
+            </div>
+
+            <div class="video-wrapper">
+              <video id="webcam-video" playsinline muted></video>
+              <canvas id="camera-overlay"></canvas>
+              <div id="air-cursor" class="air-cursor"></div>
+              <div class="video-hud">
+                <span id="hud-gesture" class="badge">Gesture: Detecting...</span>
+                <span id="hud-action" class="badge badge-info">Mode: Hover</span>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label class="toggle-control">
+                <input type="checkbox" id="chk-air-draw" checked>
+                <span class="slider"></span>
+                <span class="label-text">Enable Mid-Air Drawing (Pinch to Draw)</span>
+              </label>
+              <p class="hint">💡 <strong>Pinch</strong> index & thumb together to draw. <strong>Open Palm</strong> or hover moves cursor without drawing.</p>
+            </div>
+
+            <div class="telemetry-card">
+              <h3>Perception Telemetry</h3>
+              <div class="telemetry-row">
+                <span>Active Gesture:</span>
+                <strong id="tel-gesture">None</strong>
+              </div>
+              <div class="telemetry-row">
+                <span>Confidence:</span>
+                <strong id="tel-confidence">0%</strong>
+              </div>
+              <div class="meter-bar">
+                <div id="meter-fill" class="meter-fill" style="width: 0%"></div>
+              </div>
+              <div class="telemetry-row" style="margin-top: 10px;">
+                <span>Inference Latency:</span>
+                <strong id="tel-latency">0 ms</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Interactive Canvas -->
+          <div class="canvas-panel">
+            <div class="canvas-toolbar">
+              <div class="tool-group">
+                <button id="btn-pen" class="tool-btn active" title="Pen">✏️ Pen</button>
+                <button id="btn-eraser" class="tool-btn" title="Eraser">🧹 Eraser</button>
+                <input type="color" id="pen-color" value="#4f8cff" title="Pen Color">
+                <select id="pen-size" class="select-input">
+                  <option value="3">Fine (3px)</option>
+                  <option value="6" selected>Medium (6px)</option>
+                  <option value="12">Bold (12px)</option>
+                </select>
+              </div>
+
+              <div class="tool-group">
+                <button id="btn-autocorrect" class="tool-btn active" title="Toggle Shape Autocorrect">✨ Autocorrect: ON</button>
+                <button id="btn-undo" class="tool-btn" title="Undo Last Stroke">↩️ Undo</button>
+                <button id="btn-finish-eq" class="btn btn-primary" title="Finish current equation and move to corner">📦 Finish Equation</button>
+                <button id="btn-recognize" class="btn btn-secondary">🔍 Recognize</button>
+                <button id="btn-clear" class="btn btn-danger">🗑️ Clear</button>
+              </div>
+            </div>
+
+            <div class="canvas-container">
+              <canvas id="whiteboard-canvas"></canvas>
+              <!-- 3-Second Hand-Off-Screen Auto-Finish Banner -->
+              <div id="autofinish-toast" class="autofinish-toast">
+                <span>⏱️ Hand off-screen: finishing equation in <strong id="countdown-val">3.0s</strong>...</span>
+                <button id="btn-cancel-finish" class="btn-toast-cancel">Keep Writing</button>
+              </div>
+              <!-- Draggable Equation Cards Layer -->
+              <div id="cards-layer" class="cards-layer"></div>
+            </div>
+
+            <!-- Recognition Results Cards -->
+            <div class="results-dashboard">
+              <div class="result-box">
+                <span class="result-label">DETECTED SHAPE ($Q & 1D-CNN)</span>
+                <div class="result-value" id="res-shape">Draw a shape...</div>
+                <span class="result-sub" id="res-shape-conf">Confidence: --</span>
+              </div>
+              <div class="result-box">
+                <span class="result-label">STROKE CHARACTER (BIGRU)</span>
+                <div class="result-value" id="res-char">--</div>
+                <span class="result-sub" id="res-char-sub">Orientation: Canonical</span>
+              </div>
+              <div class="result-box">
+                <span class="result-label">ACTIVE EQUATION & DISAMBIGUATION</span>
+                <div class="result-value" id="res-equation">--</div>
+                <span class="result-sub" id="res-disambiguation">Math Context: Active</span>
+              </div>
+              <div class="result-box">
+                <span class="result-label">EQUATION CARDS (FIST GRAB)</span>
+                <div class="result-value" id="res-cards-count">0 Cards</div>
+                <span class="result-sub" id="res-cards-hint">✊ Fist over card to Grab & Drag</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: LIVE GESTURES & ASL -->
+      <section id="tab-gesture" class="tab-panel">
+        <div class="grid-2col">
+          <div class="card">
+            <h2>🖐️ Live Gesture Classifier (8 Classes)</h2>
+            <p>Classifies 21 wrist-relative 3D landmarks: <code>pinch</code>, <code>palm</code>, <code>fist</code>, <code>point</code>, <code>swipe_start</code>, <code>thumbs_up</code>, <code>palm_out</code>, <code>none</code>.</p>
+            <div class="class-matrix" id="matrix-gestures">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>🔤 ASL Alphabet Recognizer (24 Letters)</h2>
+            <p>Real-time static fingerspelling prediction with confusion pair monitoring (M/N, S/T, U/V, K/P).</p>
+            <div class="alphabet-grid" id="grid-asl-letters">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: IN-APP RECORDER -->
+      <section id="tab-recorder" class="tab-panel">
+        <div class="card">
+          <h2>📹 In-App Data Collection Tool</h2>
+          <p>Collect clean 3D landmark arrays or air-drawn stroke sequences partitioned by signer ID with zero test-set leakage.</p>
+
+          <div class="recorder-controls">
+            <div class="form-row">
+              <label>Signer / Session ID:</label>
+              <input type="text" id="rec-signer" class="text-input" value="user_session_01">
+            </div>
+            <div class="form-row">
+              <label>Target Category:</label>
+              <select id="rec-category" class="select-input">
+                <option value="gesture">Hand Gesture</option>
+                <option value="fingerspelling">ASL Alphabet</option>
+                <option value="shape">Stroke Shape</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Class Label:</label>
+              <input type="text" id="rec-label" class="text-input" value="pinch">
+            </div>
+            <div class="form-row">
+              <button id="btn-rec-capture" class="btn btn-primary">🔴 Capture Sample (Spacebar)</button>
+              <button id="btn-rec-export" class="btn btn-secondary">💾 Export Collected Dataset</button>
+            </div>
+          </div>
+
+          <div class="stats-table-wrapper">
+            <table class="data-table" id="rec-table">
+              <thead>
+                <tr>
+                  <th>Class Label</th>
+                  <th>Samples Count</th>
+                  <th>Signer</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="rec-table-body">
+                <tr><td colspan="4">No samples collected in this session yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: BENCHMARKS -->
+      <section id="tab-benchmarks" class="tab-panel">
+        <div class="card">
+          <div class="panel-header">
+            <h2>⚡ In-Browser ONNX WebAssembly Latency Benchmark</h2>
+            <button id="btn-run-benchmarks" class="btn btn-primary">Run Full Browser Benchmark</button>
+          </div>
+          <p>Executes 50 warmup iterations and 200 timed runs directly on your browser's WebAssembly / WebGL backend.</p>
+
+          <div class="benchmark-grid" id="benchmarks-container">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js?v=4"></script>
+</body>
+</html>
+

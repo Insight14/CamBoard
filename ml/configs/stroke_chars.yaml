@@ -1,0 +1,122 @@
+# CamBoard Stroke Character Recognizer Configuration (A-Z, a-z, 0-9)
+model_name: stroke_chars
+seed: 42
+num_classes: 62
+input_dim: 3
+hidden_dim: 128
+num_layers: 2
+dropout: 0.2
+n_points: 64
+orientation_head: true
+orientation_loss_weight: 0.3
+
+class_names:
+  - "0"
+  - "1"
+  - "2"
+  - "3"
+  - "4"
+  - "5"
+  - "6"
+  - "7"
+  - "8"
+  - "9"
+  - A
+  - B
+  - C
+  - D
+  - E
+  - F
+  - G
+  - H
+  - I
+  - J
+  - K
+  - L
+  - M
+  - N
+  - O
+  - P
+  - Q
+  - R
+  - S
+  - T
+  - U
+  - V
+  - W
+  - X
+  - Y
+  - Z
+  - a
+  - b
+  - c
+  - d
+  - e
+  - f
+  - g
+  - h
+  - i
+  - j
+  - k
+  - l
+  - m
+  - n
+  - o
+  - p
+  - q
+  - r
+  - s
+  - t
+  - u
+  - v
+  - w
+  - x
+  - y
+  - z
+
+data:
+  hershey_font_dir: data/raw/hershey_fonts
+  iam_online_dir: data/raw/iam_online
+  unipen_dir: data/raw/unipen
+  air_drawn_dir: data/processed/air_drawn_chars
+  val_writer_fraction: 0.15
+  test_writer_fraction: 0.15
+  augment_train: true
+  augment_config:
+    rotate_p: 0.5
+    max_angle_deg: 25.0
+    scale_p: 0.5
+    shear_p: 0.4
+    max_shear: 0.25
+    jitter_p: 0.5
+    jitter_std: 0.005
+    time_warp_p: 0.5
+    dropout_p: 0.3
+    mirror_p: 0.4
+
+training:
+  optimizer: adamw
+  lr: 2.0e-3
+  weight_decay: 1.0e-4
+  batch_size: 256
+  max_epochs: 50
+  early_stop_patience: 8
+  scheduler: cosine
+  monitor: val_acc
+  label_smoothing: 0.05
+  fine_tune_on_air_drawn: true
+
+targets:
+  held_out_writers_accuracy: 0.97
+  air_drawn_accuracy: 0.92
+
+export:
+  opset: 17
+  quantize: true
+  quantize_threshold: 0.005
+
+logging:
+  checkpoint_dir: checkpoints
+  onnx_dir: onnx
+  docs_dir: ../docs/models
+

@@ -1,0 +1,56 @@
+# CamBoard Gesture Classifier Configuration
+model_name: gesture
+seed: 42
+num_classes: 8
+class_names:
+  - pinch
+  - palm
+  - fist
+  - point
+  - swipe_start
+  - thumbs_up
+  - palm_out
+  - none
+with_velocity: false
+dropout: 0.2
+
+data:
+  data_dir: data/processed/gesture
+  val_signer_fraction: 0.15
+  test_signer_fraction: 0.15
+  target_samples_per_class: 500
+  augment_train: true
+  augment_config:
+    rotation_p: 0.5
+    max_angle_deg: 15.0
+    scale_p: 0.5
+    scale_range: [0.9, 1.1]
+    noise_p: 0.5
+    noise_std: 0.01
+    mirror_p: 0.5
+
+training:
+  optimizer: adamw
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+  batch_size: 64
+  max_epochs: 100
+  early_stop_patience: 10
+  scheduler: cosine
+  monitor: val_acc
+  label_smoothing: 0.0
+
+targets:
+  accuracy: 0.98
+  max_pinch_false_triggers_per_min: 0.05
+
+export:
+  opset: 17
+  quantize: true
+  quantize_threshold: 0.005
+
+logging:
+  checkpoint_dir: checkpoints
+  onnx_dir: onnx
+  docs_dir: ../docs/models
+

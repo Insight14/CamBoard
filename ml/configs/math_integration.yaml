@@ -1,0 +1,43 @@
+# CamBoard Math Recognition Configuration (Pretrained TAMER/BTTR Integration)
+model_name: math
+seed: 42
+vocab_size: 110
+d_model: 256
+in_channels: 1
+
+rendering:
+  image_width: 512
+  image_height: 512
+  stroke_width: 3
+  padding: 32
+  background: white
+  foreground: black
+
+pretrained:
+  model_family: BTTR
+  checkpoint_path: data/raw/math_pretrained/bttr_crohme.pth
+  crohme_test_dir: data/raw/crohme_test
+
+fine_tune:
+  enabled: false
+  lr: 2.0e-5
+  max_epochs: 10
+  early_stop_patience: 3
+  air_drawn_dir: data/processed/math_air_drawn
+
+targets:
+  symbol_level_accuracy: 0.92
+  expression_level_accuracy: 0.85
+
+export:
+  split_encoder_decoder: true
+  beam_width: 5
+  opset: 17
+  quantize: true
+  quantize_threshold: 0.005
+
+logging:
+  checkpoint_dir: checkpoints
+  onnx_dir: onnx
+  docs_dir: ../docs/models
+

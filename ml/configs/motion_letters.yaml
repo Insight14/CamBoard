@@ -1,0 +1,75 @@
+# CamBoard Motion Letters (J, Z) & Sequence Model Configuration
+model_name: motion_letters
+seed: 42
+num_classes: 26
+input_dim: 126
+hidden_dim: 64
+num_layers: 2
+dropout: 0.2
+seq_len: 30
+
+class_names:
+  - A
+  - B
+  - C
+  - D
+  - E
+  - F
+  - G
+  - H
+  - I
+  - J
+  - K
+  - L
+  - M
+  - N
+  - O
+  - P
+  - Q
+  - R
+  - S
+  - T
+  - U
+  - V
+  - W
+  - X
+  - Y
+  - Z
+
+data:
+  data_dir: data/processed/motion_letters
+  val_signer_fraction: 0.15
+  test_signer_fraction: 0.15
+  augment_train: true
+  augment_config:
+    time_warp_p: 0.5
+    time_warp_range: [0.8, 1.2]
+    jitter_std: 0.005
+    random_crop_p: 0.5
+    min_crop_frac: 0.85
+
+training:
+  optimizer: adamw
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+  batch_size: 64
+  max_epochs: 60
+  early_stop_patience: 8
+  scheduler: cosine
+  monitor: val_acc
+  label_smoothing: 0.0
+
+targets:
+  j_z_accuracy: 0.93
+  low_false_positive_rate: 0.02
+
+export:
+  opset: 17
+  quantize: true
+  quantize_threshold: 0.005
+
+logging:
+  checkpoint_dir: checkpoints
+  onnx_dir: onnx
+  docs_dir: ../docs/models
+

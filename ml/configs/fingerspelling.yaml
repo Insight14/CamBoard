@@ -1,0 +1,76 @@
+# CamBoard ASL Fingerspelling Configuration (24 static letters)
+model_name: fingerspelling
+seed: 42
+num_classes: 24
+class_names:
+  - A
+  - B
+  - C
+  - D
+  - E
+  - F
+  - G
+  - H
+  - I
+  - K
+  - L
+  - M
+  - N
+  - O
+  - P
+  - Q
+  - R
+  - S
+  - T
+  - U
+  - V
+  - W
+  - X
+  - Y
+dropout: 0.2
+
+data:
+  asl_image_root: data/raw/asl_alphabet
+  recorder_dir: data/processed/fingerspelling_recorder
+  val_fraction: 0.15
+  test_fraction: 0.15
+  augment_train: true
+  augment_config:
+    rotation_p: 0.5
+    max_angle_deg: 15.0
+    scale_p: 0.5
+    scale_range: [0.9, 1.1]
+    noise_p: 0.5
+    noise_std: 0.01
+    mirror_p: 0.5
+
+training:
+  optimizer: adamw
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+  batch_size: 64
+  max_epochs: 100
+  early_stop_patience: 10
+  scheduler: cosine
+  monitor: val_acc
+  label_smoothing: 0.05
+  fine_tune_on_recorder: true
+
+targets:
+  accuracy: 0.95
+  monitored_confusions:
+    - [M, N]
+    - [S, T]
+    - [U, V]
+    - [K, P]
+
+export:
+  opset: 17
+  quantize: true
+  quantize_threshold: 0.005
+
+logging:
+  checkpoint_dir: checkpoints
+  onnx_dir: onnx
+  docs_dir: ../docs/models
+

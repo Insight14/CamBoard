@@ -1,0 +1,71 @@
+# CamBoard Stroke Shape Recognizer Configuration
+model_name: stroke_shapes
+seed: 42
+num_classes: 10
+input_dim: 3
+n_points: 64
+dropout: 0.2
+channels: [64, 128, 256]
+
+class_names:
+  - circle
+  - square
+  - triangle
+  - star
+  - diamond
+  - arrow
+  - line
+  - rectangle
+  - hexagon
+  - zigzag
+
+data:
+  quickdraw_dir: data/raw/quickdraw
+  synthetic_dir: data/processed/synthetic_shapes
+  max_per_class: 10000
+  val_fraction: 0.1
+  test_fraction: 0.1
+  augment_train: true
+  augment_config:
+    rotate_p: 0.5
+    max_angle_deg: 20.0
+    scale_p: 0.5
+    scale_range: [0.8, 1.2]
+    shear_p: 0.3
+    max_shear: 0.2
+    jitter_p: 0.5
+    jitter_std: 0.005
+    time_warp_p: 0.5
+    time_warp_range: [0.8, 1.2]
+    dropout_p: 0.3
+    dropout_prob: 0.05
+    mirror_p: 0.5
+
+baseline:
+  evaluate_dollar_q: true
+  dollar_q_target: 0.97
+
+training:
+  optimizer: adamw
+  lr: 2.0e-3
+  weight_decay: 1.0e-4
+  batch_size: 256
+  max_epochs: 40
+  early_stop_patience: 8
+  scheduler: onecycle
+  monitor: val_acc
+  label_smoothing: 0.1
+
+targets:
+  accuracy: 0.97
+
+export:
+  opset: 17
+  quantize: true
+  quantize_threshold: 0.005
+
+logging:
+  checkpoint_dir: checkpoints
+  onnx_dir: onnx
+  docs_dir: ../docs/models
+
